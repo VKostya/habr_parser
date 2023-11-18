@@ -11,7 +11,6 @@ async def parse_page(url: str) -> dict:
     req = requests.get(url)
     if req.status_code == 200:
         soup = BeautifulSoup(req.text, "html.parser")
-
         all_articles = soup.find_all("h2", class_="tm-title tm-title_h2")
 
         for article in all_articles:  # проходимся по статьям
