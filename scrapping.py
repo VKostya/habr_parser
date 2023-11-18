@@ -3,9 +3,10 @@ import requests
 import json
 import datetime
 import logging
+import asyncio
 
 
-def parse_page(url: str) -> dict:
+async def parse_page(url: str) -> dict:
     article_dict = {}
     req = requests.get(url)
     if req.status_code == 200:
@@ -21,9 +22,8 @@ def parse_page(url: str) -> dict:
     return article_dict
 
 
-def dump_data(dict: dict) -> None:
+async def dump_data(dict: dict) -> None:
     date = str(datetime.datetime.now())
-    print(date)
     json_format = {
         "source": "habr.com",
         "date": date,
@@ -36,12 +36,12 @@ def dump_data(dict: dict) -> None:
         json.dump(json_format, fp, ensure_ascii=False)
 
 
-def main():
+async def main():
     article_dict = {}
-    for i in range(3):
+    for i in range(5):
         url = f"https://habr.com/ru/search/page{i+1}/?q=%D0%B1%D0%BB%D0%BE%D0%BA%D1%87%D0%B5%D0%B9%D0%BD&target_type=posts&order=relevance"
         try:
-            parsed_data = parse_page(url=url)
+            parsed_data = await parse_page(url=url)
             article_dict.update(parsed_data)
         except Exception as e:
             logging.info(f"could not parse {url}, shutting down")
@@ -49,7 +49,7 @@ def main():
             break
     if article_dict != {}:
         try:
-            dump_data(dict=article_dict)
+            await dump_data(dict=article_dict)
         except Exception as e:
             logging.info("could not save data")
             logging.exception("Exception")
@@ -62,4 +62,4 @@ if __name__ == "__main__":
         filemode="w",
         format="%(asctime)s - %(message)s",
     )
-    main()
+    asyncio.run(main())
