@@ -1,3 +1,8 @@
 .venv
 debug/
 debug/debug.log
+articles.csv
+word.py
+foo.png
+__pycache__
+part_of_speech.py
