@@ -8,7 +8,7 @@ ITMO magester's class lab
 
 ## How To Run
 
-1. Clone repository with ```git clone https://github.com/VKostya/habr_parser```
+1. Clone repository with ```git clone https://github.com/VKostya/habr_parser.git```
 2. Run ```pip install requirements.txt``` command in a folder
 3. Run scrapping.py to get a .json file with habr articles
 4. Run text_processing.py to process and analyze collected articles
