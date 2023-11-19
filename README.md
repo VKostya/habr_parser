@@ -10,5 +10,7 @@ ITMO magester's class lab
 - collected 48 repeated tags
 - collected 48 repeated "trendsetter" - some of them are key definitions actually
 
+All the results are stored at /static/
+
 Word cloud for blockchain related articles:
-![word cloud image](./wordcloud.png)
+![word cloud image](./static/wordcloud.png)

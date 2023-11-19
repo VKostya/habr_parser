@@ -31,7 +31,7 @@ async def dump_data(dict: dict) -> None:
             for id, (key, value) in enumerate(dict.items())
         ],
     }
-    with open("result.json", "w", encoding="utf-8") as fp:
+    with open("/static/result.json", "w", encoding="utf-8") as fp:
         json.dump(json_format, fp, ensure_ascii=False)
 
 

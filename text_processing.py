@@ -124,13 +124,13 @@ async def dump_def_key_ts_data(def_dict: dict, authors_dict: dict):
             for id, (key, value) in enumerate(authors_dict.items())
         ],
     }
-    with open("result_text_processing.json", "w", encoding="utf-8") as fp:
+    with open("static/result_text_processing.json", "w", encoding="utf-8") as fp:
         json.dump(json_format, fp, ensure_ascii=False)
     pass
 
 
 async def main():
-    with codecs.open("result.json", encoding="utf-8", mode="r") as f:
+    with codecs.open("static/result.json", encoding="utf-8", mode="r") as f:
         json_data = json.load(f)
 
     json_data = json_data["articles"]
