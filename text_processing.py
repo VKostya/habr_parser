@@ -10,16 +10,31 @@ from wordcloud import WordCloud
 from nltk.corpus import stopwords
 import pymorphy2
 import nltk
+from natasha import (
+    Segmenter,
+    MorphVocab,
+    NewsEmbedding,
+    NewsMorphTagger,
+    NewsSyntaxParser,
+    NewsNERTagger,
+    PER,
+    NamesExtractor,
+    Doc,
+)
+
+
+def insert_value(value: str, dct: dict):
+    if value in dct.keys():
+        dct[value] += 1
+    else:
+        dct[value] = 1
 
 
 async def get_key_definitions(parsed_page: BeautifulSoup, def_dict: dict):
     all_tags = parsed_page.find_all("a", class_="tm-tags-list__link")
     for tag in all_tags:
         text = tag.text
-        if text in def_dict.keys():
-            def_dict[text] += 1
-        else:
-            def_dict[text] = 1
+        insert_value(value=text, dct=def_dict)
 
 
 async def get_content(parsed_page: BeautifulSoup):
@@ -31,6 +46,34 @@ async def get_content(parsed_page: BeautifulSoup):
         code.decompose()
 
     return all_text.get_text().rstrip()
+
+
+async def get_trendsetters(text_lst: list):
+    segmenter = Segmenter()
+    morph_vocab = MorphVocab()
+    emb = NewsEmbedding()
+    morph_tagger = NewsMorphTagger(emb)
+    syntax_parser = NewsSyntaxParser(emb)
+    ner_tagger = NewsNERTagger(emb)
+    names_extractor = NamesExtractor(morph_vocab)
+
+    text = " ".join(text_lst)
+    doc = Doc(text)
+    doc.segment(segmenter)
+    doc.tag_morph(morph_tagger)
+    doc.parse_syntax(syntax_parser)
+    doc.tag_ner(ner_tagger)
+
+    for span in doc.spans:
+        span.normalize(morph_vocab)
+    for span in doc.spans:
+        if span.type == PER:
+            span.extract_fact(names_extractor)
+    freq_dict = {}
+    for _ in doc.spans:
+        if _.fact:
+            insert_value(value=_.normal, dct=freq_dict)
+    return {key: val for key, val in freq_dict.items() if val != 1 and len(key) != 1}
 
 
 async def build_wordcloud(text_lst: list):
@@ -62,17 +105,27 @@ async def build_wordcloud(text_lst: list):
     plt.axis("off")
 
 
-async def get_trendsetters(parsed_page: BeautifulSoup, ts_dict: dict):
-    pass
-
-
-async def dump_def_key_ts_data(def_dict: dict, authors_dict: dict | None = None):
+async def dump_def_key_ts_data(def_dict: dict, authors_dict: dict):
     date = str(datetime.datetime.now())
     fixed_dict = {}
     for tag in def_dict.keys():
         if def_dict[tag] != 1:
             fixed_dict[tag] = def_dict[tag]
-    print(fixed_dict)
+
+    json_format = {
+        "source": "habr.com",
+        "date": date,
+        "tags": [
+            {"id": id, "tag": key, "frequency": value}
+            for id, (key, value) in enumerate(fixed_dict.items())
+        ],
+        "trendsetters": [
+            {"id": id, "Name": key, "frequency": value}
+            for id, (key, value) in enumerate(authors_dict.items())
+        ],
+    }
+    with open("result_text_processing.json", "w", encoding="utf-8") as fp:
+        json.dump(json_format, fp, ensure_ascii=False)
     pass
 
 
@@ -82,9 +135,7 @@ async def main():
 
     json_data = json_data["articles"]
     urls = [x["href"] for x in json_data]
-    test_url = "https://habr.com/ru/articles/323586/"
     tags_dict = {}
-    ts_dict = {}
     text = []
 
     for url in urls:
@@ -92,25 +143,25 @@ async def main():
             req = requests.get(url)
             if req.status_code == 200:
                 soup = BeautifulSoup(req.text, "html.parser")
-                # await get_key_definitions(parsed_page=soup, def_dict=tags_dict)
-                plain_text = await get_content(parsed_page=soup)
-                text.append(plain_text)
-                # await get_authors(parsed_page=soup, authors_dict=authors_dict)
+                await get_key_definitions(parsed_page=soup, def_dict=tags_dict)
+                text.append(await get_content(parsed_page=soup))
+
         except Exception as e:
             logging.info("could not save data")
             logging.exception("Exception")
-    await build_wordcloud(text)
-    """
+
+    ts_dict = await get_trendsetters(text_lst=text)
     try:
-        req = requests.get(test_url)
-        if req.status_code == 200:
-            soup = BeautifulSoup(req.text, "html.parser")
-            await get_trendsetters(parsed_page=soup, ts_dict=ts_dict)
+        await dump_def_key_ts_data(def_dict=tags_dict, authors_dict=ts_dict)
     except Exception as e:
-        logging.info("could not save data")
+        logging.info("could not dump data")
         logging.exception("Exception")
-    await dump_def_key_ts_data(def_dict=tags_dict)
-    """
+
+    try:
+        await build_wordcloud(text)
+    except Exception as e:
+        logging.info("could not build word cloud")
+        logging.exception("Exception")
 
 
 if __name__ == "__main__":
